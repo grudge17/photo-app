@@ -1,0 +1,17 @@
+-------24/5
+--npm init y - for pacakage.json
+npm install express--framework used for building web apps
+npm install dotenv--for defining our variable
+npm install nodemon--to constantly run our server
+tasks done till now
+--completed the user signup/signin/signout with authorization
+--upload image(till now single)
+--read image
+--remove image
+--update image
+--sorting images
+
+--left for backend
+--renditions
+--multiple image uploads
+--indexing
