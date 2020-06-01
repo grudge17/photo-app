@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "engines": {
+    "node": "10.13.x"
+  },
   "scripts": {
     "start": "nodemon app.js"
   },
@@ -25,7 +28,6 @@
     "morgan": "^1.10.0",
     "nodemon": "^2.0.4",
     "resize-image": "^0.1.0",
-    "sharp": "^0.25.3",
     "uuid": "^8.1.0",
     "uuidv1": "^1.6.14"
   }
