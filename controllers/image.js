@@ -2,7 +2,7 @@ const Image=require('../models/image')
 const formidable=require('formidable')
 const _=require('lodash')
 const Jimp = require('jimp');
-const sharp = require('sharp');
+//const sharp = require('sharp');
 const fs=require('fs')
 const {errorHandler}=require('../helpers/dbErrorHandler')
 
