@@ -31,7 +31,7 @@ app.use(morgan('dev'))
 app.use(bodyParser.json())
 app.use(cookieParser())
 app.use(expressValidator())
-app.use(cors())
+app.use(cors('https://https://photo-app-demo.herokuapp.com'))
 
 //routes middlewares
 app.use('/',userRoutes)
