@@ -1,10 +1,18 @@
 const Image=require('../models/image')
 const formidable=require('formidable')
 const _=require('lodash')
-const Jimp = require('jimp');
-//const sharp = require('sharp');
+//const Jimp = require('jimp');
+const sharp = require('sharp');
 const fs=require('fs')
 const {errorHandler}=require('../helpers/dbErrorHandler')
+const homedir = require('os').homedir();
+var cloudinary = require('cloudinary').v2;
+
+const supported_renditions={
+    "original":1,
+    "240p":2,
+    "720p":3
+}
 
 
 exports.imageById=(req,res,next,id)=>{
@@ -19,110 +27,102 @@ exports.imageById=(req,res,next,id)=>{
     })
 }
 
-exports.upload=(req,res,next)=>{
+exports.upload= async(req,res,next)=>{
+    try{
     let form =new formidable.IncomingForm()
     form.keepExtensions=true//for image extensions
-    form.multiples=true;
-    form.parse(req,(err,fields,files)=>{
+    form.maxFieldsSize=10*1024*1024 //10 MB
+    form.multiples=false;
+    form.parse(req, async (err,fields,form)=>{
               if(err){
                   return res.status(400).json({
                       error:"Image could not uploaded"
                   })
-              }
+                }
+
              //check for all fields
-             const{title,description,uploadedBy,tags}=fields
-             if(!title || !description || !tags){
-                return res.status(400).json({
-                    error:"All fields are required!!"
-                })  
-             }
+            //  const{title,description,uploadedBy,tags}=fields
+            //  if(!title || !description || !tags){
+            //     return res.status(400).json({
+            //         error:"All fields are required!!"
+            //     })  
+            //  } 
+
+            var photo = form.file
+
+          //  await this.uploadPhoto(photo)
+              
+           var img = await this.resize(photo);
+           var doc = await img.save()
 
             
-            //  fields.uploadedBy = userId
+       
+                return    res.json("ImageId: " + doc.id)})
+        
 
-
-
-              let image=new Image(fields)
-                //1kb=1000
-                //1mb=1000000    
-            //   const pic= files.photo;;
-            if(files.photo>10000000){}
-              if(files.photo){
-                  if(files.photo.size>10000000){//TODO: chan=ge to 1024
-                    return res.status(400).json({
-                        error:"Image should be less than 10MB in size"
-                    })   
-                  }
-                //  const homedir = require('os').homedir();
-                //  sharp(files.photo.path)
-                     //  .resize(1280,720)
-                     //  .toFile(homedir+'/tmp/output/'+ image._id +'_resized.png',(err,pic)=>{
-                      //  image.photo.photo1.data=fs.readFile(homedir+'/tmp/output/'+ image._id +'_resized.png')
-                      //  image.photo.photo1.contentType=files.photo.type
-                       //  if(err){
-                             //     return res.status(400).json({
-                            //        error:errorHandler(err)
-                            //     })
-                            // }
-                             //files.photo.photo1.path=homedir+'/tmp/output/'+ image._id +'_resized.png'
-                            //  image.photo.photo1.data=fs.readFileSync(homedir+'/tmp/output/'+ image._id +'_resized.png')
-                            //  image.photo.photo1.contentType=files.photo.type
-                       //})
-                  image.photo.data=fs.readFileSync(files.photo.path)
-                  image.photo.contentType=files.photo.type
-  
-              }
-              
-           
-           
-            image.save((err,result)=>{
-                if(err){
-                    return res.status(400).json({
-                        error:errorHandler(err)
-                    })
-                }
-                res.json(result)
+        
+    }catch(e){
+              return  res.status(400).json({
+                e
             })
+                }
 
-     })
 }
 
-// function saveDB(image,result){
-//     image.save((err,result)=>{
-//         if(err){
-//             return res.status(400).json({
-//                 error:errorHandler(err)
-//             })
-//         }
-//        return result;
-//     })   
-// }
+exports.resize= async (photo)=>{
 
-// exports.rendition=(req,res)=>{
-//     const homedir = require('os').homedir();
-//     let resized_image = req.image
-//       Jimp.read(resized_image.photo.path, (err, lenna) => {
-//         if(err){
-//             return res.status(400).json({
-//                 error:errorHandler(err)
-//             })
-//         }
-//         lenna
-//           .resize(1028, 720) // resize
-//           .write(homedir+'/tmp/output/'+ image._id +'_resized.png'); // save
-//           resized_image.photo.data=fs.readFileSync(homedir+'/tmp/output/'+ image._id +'_resized.png')
-//           resized_image.photo.contentType=files.photo.type
-//         //   saveDB(resized_image,res);
-//         resized_image.save((err,result)=>{
-//             if(err){
-//                 return res.status(400).json({
-//                     error:errorHandler(err)
-//                 })
-//             }
-//            res.json(result);
-//         })   
-// })
-// }
+                let image=new Image()
+
+                  if(photo.size>10000000){//TODO: chan=ge to 1024
+                    // return res.status(400).json({
+                    //     error:"Image should be less than 10MB in size"
+                    // })   
+                  }
+                  image.photos.push({
+                        renditionType: 'original',
+                        data: fs.readFileSync(photo.path),
+                        contentType: photo.type
+                  })
+
+
+                  const resized_240p =  await sharp(photo.path)
+                        .resize(426,240)
+                        .toBuffer()
+
+                  image.photos.push({
+                    renditionType: '240p',
+                    data: resized_240p  ,
+                    contentType: photo.type
+                  })
+                
+                  const resized_720p =  await sharp(photo.path)
+                        .resize(1280,720)
+                        .toBuffer()
+
+                  image.photos.push({
+                    renditionType: '720p',
+                    data: resized_720p  ,
+                    contentType: photo.type
+                  })
+
+                  return image;
+
+}
+
+exports.uploadPhoto = async(photoPath)=>{
+  //  const formData = new FormData();
+
+    
+    cloudinary.uploader.upload(photoPath, 
+        function(error, result) 
+        {
+            console.log(result, error)
+            return result.url
+        });
+
+}
+
+
 
 
 exports.read=(req,res)=>{
@@ -154,13 +154,7 @@ exports.remove=(req,res)=>{
                           error:"Image could not uploaded"
                       })
                   }
-                 //check for all fields
-                 const{title,description,uploadedBy,tags}=fields
-                 if(!title || !description || !tags){
-                    return res.status(400).json({
-                        error:"All fields are required!!"
-                    })  
-                 }
+
     
     
     
@@ -176,8 +170,11 @@ exports.remove=(req,res)=>{
                             error:"Image should be less than 10MB in size"
                         })   
                       }
+
                       image.photo.data=fs.readFileSync(files.photo.path)
                       image.photo.contentType=files.photo.type
+
+                     
 
                   }
                   image.save((err,result)=>{
@@ -192,9 +189,16 @@ exports.remove=(req,res)=>{
     
     }
     exports.photo=(req,res,next)=>{
-        if(req.image.photo.data){
-            res.set('Content-Type',req.image.photo.contentType)//we will save any image type ex:-jpeg,png etc
-            return res.send(req.image.photo.data)
+        let order =req.query.renditionType ? 0 : -1
+        if(order==0){
+            if(req.query.renditionType == "240p")order=1
+            else if(req.query.renditionType == "720p")order=2
+            else order=0
+        }
+
+        if(req.image.photos[order].data){
+            res.set('Content-Type',req.image.photos[order].contentType)//we will save any image type ex:-jpeg,png etc
+            return res.send(req.image.photos[order].data)
         }
         next()
     }
@@ -208,15 +212,18 @@ exports.remove=(req,res)=>{
 exports.view=(req,res)=>{
     let order =req.query.orderBy ? req.query.orderBy : 'desc'
     let sortBy=req.query.sortBy ? req.query.sortBy : 'createdAt'
+    let offset=req.query.offset ? parseInt(req.query.offset) : 0
     let limit=req.query.limit ? parseInt(req.query.limit) : 30 // we need to parse it to INT 
 
     Image.find()
-           .select("-photo")//we are deselecting photo as it is a large string so sending it will make the process
+           .select("-photos")//we are deselecting photo as it is a large string so sending it will make the process
            .populate('image')//slow so we will make another req for photo ,to make it faster
            .sort([[sortBy,order]])
+           .skip(offset)
            .limit(limit)
            .exec((err,images)=>{
                if(err){
+                   console.log(err)
                    return res.status(400).json({
                        error:'Products not Found!!'
                    })
@@ -224,3 +231,8 @@ exports.view=(req,res)=>{
                res.json(images)
            })
 }
+
+
+
+
+
